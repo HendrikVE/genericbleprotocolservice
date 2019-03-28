@@ -19,7 +19,6 @@ import com.polidea.rxandroidble2.scan.ScanResult;
 import com.polidea.rxandroidble2.scan.ScanSettings;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -49,10 +48,6 @@ public class GenericBleProtocolService extends Service {
     public static final int DEVICE_CONNECTION_ERROR_WRITE = 4;
 
     private final IBinder mBinder = new LocalBinder();
-
-    private boolean mDisconnectPending = false;
-
-    private HashMap<UUID, String> mCharacteristicHashMap;
 
     private List<ScanListener> mScanListenerList = new ArrayList<>();
     private List<BluetoothPreconditionStateListener> mBluetoothPreconditionStateListenerList = new ArrayList<>();
@@ -178,7 +173,7 @@ public class GenericBleProtocolService extends Service {
 
         if (mConnectionSubscription != null && !mConnectionSubscription.isDisposed()) {
             //allow only one connection at the same time
-            mConnectionSubscription.dispose();
+            disconnectDevice();
         }
 
         mConnectionSubscription = device.establishConnection(false)
@@ -356,142 +351,6 @@ public class GenericBleProtocolService extends Service {
 
         mBluetoothAdapterStateListenerList.remove(listener);
     }
-
-    /*
-    private BluetoothGattCallback mGattCharacteristicCallback = new BluetoothGattCallback() {
-
-        @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-
-            LoggingUtil.debug("onConnectionStateChange");
-            LoggingUtil.debug("status: " + status);
-            LoggingUtil.debug("newState: " + newState);
-
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-
-                switch (newState) {
-
-                    case BluetoothProfile.STATE_CONNECTED:
-                        LoggingUtil.debug("discoverServices");
-                        gatt.discoverServices();
-                        break;
-
-                    case BluetoothProfile.STATE_DISCONNECTED:
-                        gatt.close();
-                        mBluetoothGatt = null;
-                        mBluetoothGattService = null;
-                        mDeviceConnectionListenerSet.forEach(l -> l.onDeviceDisconnected());
-                        break;
-
-                    default:
-                        LoggingUtil.debug("unhandled state: " + newState);
-                }
-            }
-            else {
-                mDeviceConnectionListenerSet.forEach(l -> l.onDeviceConnectionError(DEVICE_CONNECTION_ERROR_GENERIC));
-            }
-        }
-
-        @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-
-            LoggingUtil.debug("onServicesDiscovered");
-
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                LoggingUtil.error("status != BluetoothGatt.GATT_SUCCESS");
-
-                mDeviceConnectionListenerSet.forEach(l -> l.onDeviceConnectionError(DEVICE_CONNECTION_ERROR_GENERIC));
-
-                return;
-            }
-
-            mBluetoothGattService = gatt.getService(BLE_SERVICE_UUID);
-            if (mBluetoothGattService == null) {
-
-                gatt.disconnect();
-
-                mDeviceConnectionListenerSet.forEach(l -> l.onDeviceConnectionError(DEVICE_CONNECTION_ERROR_UNSUPPORTED));
-
-                return;
-            }
-
-            mDeviceConnectionListenerSet.forEach(l -> l.onDeviceConnected());
-        }
-
-        @Override
-        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristicRead, int status) {
-
-            UUID uuid = characteristicRead.getUuid();
-            String value = characteristicRead.getStringValue(0);
-
-            LoggingUtil.debug("onCharacteristicRead");
-            LoggingUtil.debug("uuid: " + uuid);
-            LoggingUtil.debug("value: " + value);
-
-            LoggingUtil.debug("pending queue size: " + mReadCharacteristicsOperationsQueue.size());
-
-            mCharacteristicHashMap.put(characteristicRead.getUuid(), characteristicRead.getStringValue(0));
-            mDeviceConnectionListenerSet.forEach(l -> l.onCharacteristicRead(uuid, value));
-
-            synchronized (mReadCharacteristicsOperationsQueue) {
-
-                if (mReadCharacteristicsOperationsQueue.size() > 0) {
-
-                    BluetoothGattCharacteristic characteristic
-                            = mBluetoothGattService.getCharacteristic(mReadCharacteristicsOperationsQueue.poll());
-
-                    boolean success = gatt.readCharacteristic(characteristic);
-                    if (! success) {
-                        mDeviceConnectionListenerSet.forEach(l -> l.onDeviceConnectionError(DEVICE_CONNECTION_ERROR_READ));
-                    }
-                }
-                else {
-                    mDeviceConnectionListenerSet.forEach(l -> l.onAllCharacteristicsRead(mCharacteristicHashMap));
-
-                    if (mDisconnectPending) {
-                        disconnectDevice();
-                    }
-                }
-            }
-        }
-
-        @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristicWrote, int status) {
-
-            UUID uuid = characteristicWrote.getUuid();
-            String value = characteristicWrote.getStringValue(0);
-
-            LoggingUtil.debug("onCharacteristicWrite");
-            LoggingUtil.debug("uuid: " + uuid);
-            LoggingUtil.debug("value: " + value);
-
-            LoggingUtil.debug("pending queue size: " + mWriteCharacteristicsOperationsQueue.size());
-
-            mDeviceConnectionListenerSet.forEach(l -> l.onCharacteristicWrote(uuid, value));
-
-            synchronized (mWriteCharacteristicsOperationsQueue) {
-
-                if (mWriteCharacteristicsOperationsQueue.size() > 0) {
-
-                    BluetoothGattCharacteristic characteristic
-                            = mBluetoothGattService.getCharacteristic(mWriteCharacteristicsOperationsQueue.poll());
-
-                    boolean success = gatt.writeCharacteristic(characteristic);
-                    if (! success) {
-                        mDeviceConnectionListenerSet.forEach(l -> l.onDeviceConnectionError(DEVICE_CONNECTION_ERROR_WRITE));
-                    }
-                }
-                else {
-                    mDeviceConnectionListenerSet.forEach(l -> l.onAllCharacteristicsWrote());
-
-                    if (mDisconnectPending) {
-                        disconnectDevice();
-                    }
-                }
-            }
-        }
-    };
-    */
 
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 
