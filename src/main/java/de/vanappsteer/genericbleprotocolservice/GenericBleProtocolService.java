@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import io.reactivex.Observable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.plugins.RxJavaPlugins;
 
@@ -64,6 +65,7 @@ public class GenericBleProtocolService extends Service {
     private Disposable mFlowDisposable;
     private Disposable mScanSubscription;
     private Disposable mConnectionSubscription;
+    private Disposable mDisposable;
 
     public GenericBleProtocolService() { }
 
@@ -169,6 +171,7 @@ public class GenericBleProtocolService extends Service {
         mScanSubscription.dispose();
     }
 
+    @SuppressLint("CheckResult")
     public void connectDevice(RxBleDevice device) {
 
         if (mConnectionSubscription != null && !mConnectionSubscription.isDisposed()) {
@@ -177,8 +180,7 @@ public class GenericBleProtocolService extends Service {
         }
 
         mConnectionSubscription = device.establishConnection(false)
-            .subscribe(
-                rxBleConnection -> {
+                .subscribe(rxBleConnection -> {
                     mRxBleConnection = rxBleConnection;
                     mRxBleConnection.discoverServices().subscribe(
                         deviceServices -> {
@@ -310,6 +312,23 @@ public class GenericBleProtocolService extends Service {
                     );
                 }
             );
+    }
+
+    @SuppressLint("CheckResult")
+    public void subscribeIndication(UUID uuid) {
+
+        mDisposable = mRxBleConnection.setupIndication(uuid)
+                .flatMap(notificationObservable -> notificationObservable)
+                .subscribe(
+                        bytes -> {
+                            mDeviceConnectionListenerSet.forEach(
+                                    l -> l.onCharacteristicRead(uuid, new String(bytes))
+                            );
+                        },
+                        throwable -> {
+                            LoggingUtil.error(throwable.getMessage());
+                        }
+                );
     }
 
     public void addDeviceConnectionListener(DeviceConnectionListener listener) {
