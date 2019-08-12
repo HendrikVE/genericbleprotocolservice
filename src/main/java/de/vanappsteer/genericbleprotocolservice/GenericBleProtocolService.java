@@ -207,6 +207,10 @@ public class GenericBleProtocolService extends Service {
                     mDeviceConnectionListenerSet.forEach(
                         l -> l.onDeviceConnectionError(DEVICE_CONNECTION_ERROR_GENERIC)
                     );
+
+                    mDeviceConnectionListenerSet.forEach(
+                            l -> l.onDeviceDisconnected()
+                    );
                 }
             );
     }
@@ -270,6 +274,10 @@ public class GenericBleProtocolService extends Service {
 
         if (mConnectionSubscription != null) {
             mConnectionSubscription.dispose();
+
+            mDeviceConnectionListenerSet.forEach(
+                    l -> l.onDeviceDisconnected()
+            );
         }
     }
 
