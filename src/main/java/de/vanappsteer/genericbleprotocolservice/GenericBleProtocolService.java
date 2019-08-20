@@ -186,7 +186,7 @@ public class GenericBleProtocolService extends Service {
                         deviceServices -> {
                             if (checkSupportedService(deviceServices)) {
                                 mDeviceConnectionListenerSet.forEach(
-                                    l -> l.onDeviceConnected()
+                                        DeviceConnectionListener::onDeviceConnected
                                 );
                             }
                             else {
@@ -209,7 +209,7 @@ public class GenericBleProtocolService extends Service {
                     );
 
                     mDeviceConnectionListenerSet.forEach(
-                            l -> l.onDeviceDisconnected()
+                            DeviceConnectionListener::onDeviceDisconnected
                     );
                 }
             );
@@ -276,7 +276,7 @@ public class GenericBleProtocolService extends Service {
             mConnectionSubscription.dispose();
 
             mDeviceConnectionListenerSet.forEach(
-                    l -> l.onDeviceDisconnected()
+                    DeviceConnectionListener::onDeviceDisconnected
             );
         }
     }
