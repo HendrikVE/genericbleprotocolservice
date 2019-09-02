@@ -168,7 +168,9 @@ public class GenericBleProtocolService extends Service {
     }
 
     public void stopDeviceScan() {
-        mScanSubscription.dispose();
+        if (mScanSubscription != null) {
+            mScanSubscription.dispose();
+        }
     }
 
     @SuppressLint("CheckResult")
